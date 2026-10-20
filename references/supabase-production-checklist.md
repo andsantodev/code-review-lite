@@ -21,9 +21,13 @@ pelo código do frontend.
 
 ## Chaves e escopo
 
-- [ ] `service_role` key **nunca** aparece em código que roda no browser — nem em
-      `NEXT_PUBLIC_*`/`VITE_*`, nem hardcoded, nem em resposta de API que o client lê.
-      Ela só pode existir em código server-side (route handler, Edge Function, cron).
+- [ ] `service_role` key (ou a nova secret key `sb_secret_...`) **nunca** aparece em
+      código que roda no browser — nem em variável de prefixo público
+      (`NEXT_PUBLIC_*`/`VITE_*`/`NUXT_PUBLIC_*`), nem hardcoded, nem em resposta de API
+      que o client lê. Ela só pode existir em código server-side (route handler, Edge
+      Function, cron) — e esse módulo deve ter `import 'server-only'` quando o projeto é
+      Next. A checagem 2 (`scripts/scan-secrets.sh`) já sinaliza nome secret-like em
+      variável pública.
 - [ ] `anon` key pode estar no client normalmente — mas só é segura na medida em que a
       RLS acima está correta; ela não é, por si, um controle de acesso.
 - [ ] Nenhuma Edge Function lê segredo hardcoded — tudo via `Deno.env.get(...)`.
@@ -42,6 +46,17 @@ pelo código do frontend.
       domínios reais do projeto — nada de wildcard amplo demais.
 - [ ] Nenhuma rota de API confia em `user_id`/`role` vindo do body/query para decidir
       permissão — sempre deriva da sessão/token validado no servidor.
+- [ ] Em projeto **Next.js**, o client de Supabase é criado com `@supabase/ssr`
+      (`createServerClient` no server, `createBrowserClient` no browser), não com
+      `supabase-js` puro lendo cookie na mão — é o que mantém a sessão em cookie e
+      permite renovação no proxy/middleware.
+- [ ] No servidor, a decisão de acesso usa `getClaims()` (verifica a assinatura do JWT a
+      cada chamada; método recomendado pela doc atual) — e `getUser()` quando a ação é
+      sensível ou quando é preciso garantir que a sessão não foi revogada, já que
+      `getClaims()` não consulta o Auth server sobre logout/revogação.
+- [ ] `getSession()` no servidor não alimenta autorização: o cookie pode ser forjado e o
+      método não revalida. Uso legítimo é só encaminhar o access token.
+- [ ] Detalhamento e casos de falso positivo em `references/auth-session.md`.
 
 ## Migrations e schema
 
