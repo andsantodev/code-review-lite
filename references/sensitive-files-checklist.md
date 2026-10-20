@@ -6,16 +6,22 @@ sensível colado dentro.
 
 ## Nunca flagrar só por existir (são estado do harness, vão para o Git por design)
 
-- `AGENTS.md`
-- `feature_list.json`
-- `progress.md`
-- `session-handoff.md`
-- `docs/PRD.md`
-- Adaptadores de IDE (`CLAUDE.md`, `.cursor/rules/*.mdc`, etc.)
+Aceite **os dois locais**: `docs/` (formato atual do pacote Harness) e a raiz (projetos
+antigos). O mesmo arquivo pode aparecer em qualquer um deles.
 
+- `AGENTS.md` — sempre na raiz.
+- `PRD.md` — raiz ou `docs/PRD.md`.
+- `feature_list.json` — raiz ou `docs/feature_list.json`.
+- `progress.md` — raiz ou `docs/progress.md`.
+- `session-handoff.md` — raiz ou `docs/session-handoff.md`.
+- Notas de verificação do harness (evidência de teste/QA da feature) em `docs/` ou na
+  raiz.
+- Adaptadores de IDE (`CLAUDE.md`, `.cursor/rules/*.mdc`, etc.).
+
+A regra vale acima da lista: **avalie pelo conteúdo, nunca pela existência do arquivo**.
 Esses arquivos só entram no relatório se o conteúdo bater em algum padrão de segredo da
-checagem 1 (ex.: alguém colou uma URL de banco com senha dentro de uma nota do
-`session-handoff.md` sem perceber) — nunca pela existência do arquivo.
+checagem 2 (ex.: alguém colou uma URL de banco com senha dentro de uma nota do
+`session-handoff.md` sem perceber).
 
 ## Flagrar por nome (padrão de arquivo local/rascunho)
 
@@ -23,12 +29,12 @@ checagem 1 (ex.: alguém colou uma URL de banco com senha dentro de uma nota do
 - Briefs de ferramenta externa colados manualmente (ex.: export de design tool, resposta
   de API, log de terminal colado num `.md` para referência) — comum acontecer de vir
   junto uma chave ou URL interna sem querer.
-- Qualquer `.md`/`.txt` fora de `docs/` que pareça anotação pessoal de sessão, não
-  documentação do produto.
+- Qualquer `.md`/`.txt` que pareça anotação pessoal de sessão, não documentação do
+  produto — independente de estar em `docs/` ou na raiz.
 
 ## Flagrar por conteúdo (independente do nome)
 
-Rodar o mesmo scan de segredos da checagem 1 (`scripts/scan-secrets.sh`) também sobre
+Rodar o mesmo scan de segredos da checagem 2 (`scripts/scan-secrets.sh`) também sobre
 `.md`/`.txt`, não só sobre código — é o vetor mais comum: alguém cola um erro, uma
 resposta de API ou uma connection string numa nota "só para lembrar depois" e esquece
 que aquilo vai para o commit.
@@ -45,6 +51,9 @@ que aquilo vai para o commit.
 
 - [ ] Nenhum `.md`/`.txt` novo no diff bate em padrão de nome de rascunho/local sem
       estar no `.gitignore`.
+- [ ] Arquivos canônicos do harness (`feature_list.json`, `progress.md`,
+      `session-handoff.md`, `PRD.md`, notas de verificação) em `docs/` **ou** na raiz não
+      foram flagrados apenas por existir.
 - [ ] Nenhum `.md`/`.txt` (incluindo os canônicos do harness) contém segredo/credencial
       colada no texto.
 - [ ] `.gitignore` cobre os padrões de nota local que o projeto de fato usa (se o

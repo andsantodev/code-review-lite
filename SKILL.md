@@ -85,9 +85,13 @@ checklist, não um julgamento caso a caso.
 ### 3. Arquivos `.md` e notas que não deveriam ir para o GitHub
 
 - Leia `references/sensitive-files-checklist.md`.
-- Não trate como problema os arquivos canônicos do harness (`AGENTS.md`,
-  `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/PRD.md`, adaptadores
-  de IDE) — esses são estado do projeto e devem ir para o Git por design.
+- Não trate como problema os arquivos canônicos do harness — são estado do projeto e vão
+  para o Git por design, em **`docs/` ou na raiz** (aceite as duas formas, para projetos
+  antigos e novos continuarem corretos): `AGENTS.md` (na raiz), `PRD.md`,
+  `feature_list.json`, `progress.md`, `session-handoff.md`, notas de verificação em
+  `docs/`, adaptadores de IDE.
+- A regra que vale acima da lista: avalie pelo **conteúdo**, nunca pela existência do
+  arquivo.
 - Flagre: notas soltas de trabalho (`NOTES*.md`, `SCRATCH*.md`, `*.local.md`,
   `*.private.md`, rascunhos de design/briefs colados com respostas de ferramenta) e
   qualquer `.md`/`.txt` cujo conteúdo bata nos mesmos padrões de segredo da checagem 2.
