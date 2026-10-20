@@ -1,14 +1,15 @@
 ---
 name: code-review-lite
-description: Faz um gate de segurança e review leve ANTES de um git push ou deploy, verificando dependências com CVE real (npm/pnpm/yarn audit), segredos e credenciais expostas (.env, API keys, tokens, service keys, chaves privadas), URLs privadas hardcoded, arquivos .md/notas que não deveriam ir para o repositório, logs com dados sensíveis, padrões de SQL injection, XSS e IDOR/autorização (Server Actions, Route Handlers, RPC), e — para stacks com Supabase — uma checklist de "banco como se fosse produção" (RLS, policies, escopo da service_role key). Use sempre que o usuário perguntar se pode subir/commitar/dar push, pedir uma revisão de segurança, um "code review" ou "security review" antes do deploy, mencionar code-review-lite, ou finalizar uma feature e estar prestes a integrar/publicar o código. Não use para escrever, depurar ou revisar código por qualidade/estilo em geral — isso é code-review-skill ou revisão manual. Não use para gerar PRD ou pacote Harness — isso é harness-engineering-prd.
+description: Faz um gate de segurança e review leve ANTES de um git push ou deploy, verificando dependências com CVE real (npm/pnpm/yarn audit), segredos e credenciais expostas (.env, API keys, tokens, service keys, chaves privadas), URLs privadas hardcoded, arquivos .md/notas que não deveriam ir para o repositório, logs com dados sensíveis, padrões de SQL injection, XSS, IDOR/autorização (Server Actions, Route Handlers, RPC), autenticação e sessão (token em storage, logout que não invalida, @supabase/ssr e getClaims no servidor, CSRF) e configuração de produção (CORS, headers/CSP, source maps, open redirect, SSRF, SRI); e — para stacks com Supabase — uma checklist de "banco como se fosse produção" (RLS, policies, escopo da service_role key). Use sempre que o usuário perguntar se pode subir/commitar/dar push, pedir uma revisão de segurança, um "code review" ou "security review" antes do deploy ou de publicar uma release, mencionar code-review-lite, ou finalizar uma feature e estar prestes a integrar/publicar o código. Não use para escrever, depurar ou revisar código por qualidade/estilo em geral — isso é code-review-skill ou revisão manual. Não use para gerar PRD ou pacote Harness — isso é harness-engineering-prd.
 ---
 
 # Code Review Lite — Gate de Segurança Pré-Push
 
 Checklist curta e objetiva para rodar **antes de `git push` ou deploy**, focada só em
 segurança e vazamento de dados — não é um code review de qualidade/estilo completo.
-Feita para o stack Next.js / Vue 3 / TypeScript / Supabase / Vercel, mas os padrões de
-segredos, dependências, SQL injection, XSS e IDOR valem para qualquer stack.
+Feita para o stack **Next.js / React (primeiro plano)**, com suporte a Vue 3, TypeScript,
+Supabase e Vercel; os padrões de segredos, dependências, SQL injection, XSS, IDOR,
+autenticação/sessão e configuração de produção valem para qualquer stack.
 
 Esta skill **reporta e sugere correção** — nunca edita ou faz commit sozinha. Toda
 correção só é aplicada depois de aprovação explícita do usuário, do mesmo jeito que o
@@ -16,8 +17,8 @@ resto do fluxo de harness.
 
 ## Princípio: evidência > padrão
 
-Antes de reportar qualquer achado nos 8 passos abaixo — não só nos de código — confirme
-que as quatro perguntas seguintes são "sim":
+Antes de reportar qualquer achado nas 10 checagens abaixo — não só nos de código —
+confirme que as quatro perguntas seguintes são "sim":
 
 1. Existe um caminho de exploração plausível, não só um padrão que parece arriscado?
 2. A entrada chega até ali controlada por quem ataca (request, upload, header, query
@@ -40,7 +41,7 @@ reportar.
 - Sob pedido explícito ("roda o code-review-lite", "posso subir isso?", "revisa antes
   de commitar").
 
-## Fluxo — 8 checagens, nesta ordem
+## Fluxo — 10 checagens, nesta ordem
 
 Rode todas, mesmo que uma pareça óbvia de pular — o valor do gate é ser sempre o mesmo
 checklist, não um julgamento caso a caso.
@@ -75,7 +76,7 @@ checklist, não um julgamento caso a caso.
   de IDE) — esses são estado do projeto e devem ir para o Git por design.
 - Flagre: notas soltas de trabalho (`NOTES*.md`, `SCRATCH*.md`, `*.local.md`,
   `*.private.md`, rascunhos de design/briefs colados com respostas de ferramenta) e
-  qualquer `.md`/`.txt` cujo conteúdo bata nos mesmos padrões de segredo da checagem 1.
+  qualquer `.md`/`.txt` cujo conteúdo bata nos mesmos padrões de segredo da checagem 2.
 
 ### 4. SQL Injection
 
@@ -108,15 +109,43 @@ checklist, não um julgamento caso a caso.
 - Confira se alguma lib de log em produção despeja corpo completo de request/response
   sem redação.
 
+### 9. Autenticação e sessão
+
+- Leia `references/auth-session.md`.
+- Aplique no fluxo de login/logout, no storage do token e em todo código server-side que
+  decide acesso (Route Handler, Server Action, proxy/middleware).
+- Em Next + Supabase, confirme o uso de `@supabase/ssr` e o método de verificação no
+  servidor: `getClaims()` para proteger página/dado, `getUser()` em ação sensível,
+  `getSession()` nunca como decisão de autorização.
+- CSRF só vira achado quando a mutação sai por `GET`, há cookie `SameSite=None` sem
+  proteção, ou a auth por cookie é implementada à mão — Server Actions do Next têm
+  proteção embutida (POST + `Origin`/`Host`), não reporte por padrão.
+
+### 10. Configuração de produção e URLs externas
+
+- Leia `references/security-config.md`.
+- Aplique em `next.config`/`vercel.json`/`vite.config`, em Route Handlers que definem CORS
+  ou fazem `fetch` com URL recebida, e em qualquer `redirect`/`href`/`src` que venha de
+  query, props ou API.
+- Fique no lado certo da fronteira: no front o risco é open redirect/esquema perigoso
+  (`javascript:`, `data:`); no servidor é SSRF. Source maps e SRI entram como 🟠/nota,
+  nunca como bloqueio por si só.
+
 ## Relatório final
 
-Feche sempre com um resumo em três níveis, sem misturar:
+Feche sempre com um resumo por severidade, sem misturar (as checagens puladas ficam
+separadas dos três níveis):
 
 - 🔴 **Bloqueante** — segredo real exposto, `.env` rastreado, RLS ausente em tabela
-  pública, SQL injection explorável. Não deve ir para o GitHub assim.
+  pública, SQL injection explorável, CORS refletindo qualquer origem com credenciais,
+  requisição server-side para URL arbitrária devolvendo dado interno (SSRF), sessão
+  confiada a `getSession()` com dado privado atrás. Não deve ir para o GitHub assim.
 - 🟠 **Importante** — padrão arriscado mas não confirmado como explorável (ex.: log
-  perto de dado sensível, XSS em campo que hoje não recebe input de usuário).
+  perto de dado sensível, XSS em campo que hoje não recebe input de usuário, open
+  redirect sem entrega de token, source maps em produção, CSP ausente).
 - ✅ **OK** — checagem passou.
+- **Pulado** — checagem não se aplica ao stack (ex.: Supabase em projeto sem Supabase).
+  Diga explicitamente qual foi pulada e por quê; não deixe implícito.
 
 Termine perguntando explicitamente se o usuário quer que você aplique as correções
 sugeridas (uma por vez, com o diff) ou só deixar o relatório para ele revisar. Nunca
