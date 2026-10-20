@@ -38,6 +38,8 @@ reportar.
 
 - Antes de `git push` de uma feature terminada (fecha o WIP=1 da feature).
 - Antes de um deploy (Vercel ou outro).
+- Como um dos passos da inspeção de release gerada pelo harness (opcional — a skill roda
+  sozinha, sem depender do harness).
 - Sob pedido explícito ("roda o code-review-lite", "posso subir isso?", "revisa antes
   de commitar").
 
@@ -171,15 +173,26 @@ edite arquivos nesta etapa sem essa confirmação.
 
 ## Fora de escopo
 
+- **Qualidade, estilo e UX** não são achado aqui: `console.log` de debug, imports não
+  usados, `any` no TypeScript, estados de UI (loading/error/empty), acessibilidade e
+  tratamento de `onAuthStateChange` pertencem à **Definition of Done do harness**, não a
+  esta skill. A exceção é o que já está nas checagens: log que despeja dado sensível
+  (checagem 8) continua sendo achado; `console.log("clicou")` não é.
+- **Não é pré-requisito do harness nem depende dele.** A feature final de inspeção de
+  release gerada pelo harness **pode** chamar esta skill como um dos passos, mas ela roda
+  sozinha em qualquer repositório — sem `feature_list.json`, sem PRD e sem estado de
+  harness.
 - Isto não é o `claude-security` (plugin oficial multi-agente da Anthropic, exclusivo
   do Claude Code) — aquele mapeia arquitetura, verifica achados contra falso-positivo e
   gera patches, mas roda em Claude Code, consome tokens do plano pago e pode ficar caro
   em repositórios grandes. Para uma auditoria mais profunda/verificada, rode aquele
   separadamente; esta skill é o gate rápido de todo dia, portável para qualquer
   ambiente (inclusive OpenCode).
-- Não faz code review de qualidade, arquitetura ou performance — isso é
-  `code-review-skill`/revisão manual.
+- Não faz code review de arquitetura ou performance — isso é `code-review-skill`/revisão
+  manual.
 - Não gera nem edita os documentos do harness — isso é `harness-engineering-prd`.
+- **Stack**: Next.js/React é o foco principal. O conteúdo de Vue 3 é mantido como está
+  (XSS em `v-html`, guard de rota, `NUXT_PUBLIC_*`), sem expandir a cobertura de Vue.
 - Para um projeto 100% React/Next.js/Prisma sem Vue nem Supabase, a skill
   `security-audit` (devfraga/skills-sujeito-programador) vai mais fundo em CVE por
   versão instalada e IDOR em Auth.js — vale considerar como complemento pontual nesses
