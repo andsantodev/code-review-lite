@@ -55,7 +55,7 @@ else
   #   - JWT-like (usado por Supabase para anon/service_role) atribuído a variável
   #   - atribuição genérica de secret/token/apikey/password com valor literal
   PATTERN='(AKIA[0-9A-Z]{16})'
-  PATTERN+='|(-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----)'
+  PATTERN+='|(-----BEGIN ((RSA|EC|OPENSSH) )?PRIVATE KEY-----)'
   PATTERN+='|((SUPABASE_SERVICE_ROLE|SERVICE_ROLE)_KEY[[:space:]]*[:=][[:space:]]*["'"'"']?eyJ)'
   PATTERN+='|((secret|token|apikey|api_key|password|passwd)[[:space:]]*[:=][[:space:]]*["'"'"'][A-Za-z0-9_\-]{12,}["'"'"'])'
 
@@ -71,6 +71,29 @@ else
     echo "✅ Nenhum padrão óbvio encontrado pelo fallback."
     echo
   fi
+fi
+
+# --- 2b) nome secret-like em variável pública -----------------------------
+# Roda sempre (não só no fallback): gitleaks/trufflehog não conhecem a convenção
+# NEXT_PUBLIC_/VITE_/NUXT_PUBLIC_, e qualquer valor com esses prefixos vai para o
+# bundle do browser por definição.
+PUB_PAT='(NEXT_PUBLIC_|VITE_|NUXT_PUBLIC_|PUBLIC_)[A-Za-z0-9_]*(SECRET|SERVICE_ROLE|PRIVATE|PASSWORD|PASSWD|TOKEN|API_?KEY)[A-Za-z0-9_]*[[:space:]]*[:=][[:space:]]*["'"'"']?[^"'"'"'[:space:]]{8,}'
+PUB_HITS=$(grep -RInE -i --exclude-dir='.git' --exclude-dir='node_modules' --exclude-dir='dist' --exclude-dir='.next' \
+  "$PUB_PAT" "$TARGET" 2>/dev/null || true)
+
+# Chaves públicas/anon são publicáveis por design; placeholders não são segredo.
+if [ -n "$PUB_HITS" ]; then
+  PUB_HITS=$(echo "$PUB_HITS" | grep -Eiv '(PUBLISHABLE|_ANON_KEY|_PUBLIC_KEY)[A-Za-z0-9_]*[[:space:]]*[:=]' || true)
+fi
+if [ -n "$PUB_HITS" ]; then
+  PUB_HITS=$(echo "$PUB_HITS" | grep -Eiv '[:=][[:space:]]*["'"'"']?(your[-_]|example|changeme|change-me|placeholder|xxx|<|\$\{|\.\.\.)' || true)
+fi
+
+if [ -n "$PUB_HITS" ]; then
+  echo "🔴 BLOQUEANTE — nome secret-like em variável pública (vai para o bundle do browser):"
+  echo "$PUB_HITS" | sed 's/^/   /'
+  echo
+  FOUND=1
 fi
 
 # --- 3) checagem de .gitignore -------------------------------------------

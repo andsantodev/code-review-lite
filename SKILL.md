@@ -66,6 +66,20 @@ checklist, não um julgamento caso a caso.
   `.example`/`.sample`/`.template` é bloqueante.
 - Confira o `.gitignore` na raiz: precisa cobrir `.env`, `.env.*` (exceto os exemplos),
   `*.pem`, `*.key`, `*.p12`.
+- **Variável pública com nome secret-like** é bloqueante: qualquer coisa em
+  `NEXT_PUBLIC_*`, `VITE_*` ou `NUXT_PUBLIC_*` vai para o bundle do browser por
+  definição. O script sinaliza nome secret-like nesses prefixos e ignora chaves
+  publicáveis (`PUBLISHABLE`, `_ANON_KEY`) e placeholders — se o achado for um valor
+  real, é 🔴.
+- **Separação server/client**: módulo que lê segredo, `service_role` ou client admin
+  deve ter `import 'server-only'` (Next) — assim um import acidental no client quebra o
+  build em vez de vazar. Em Vue/Nuxt, a regra equivalente é o módulo viver fora do que
+  o client importa (e nunca usar prefixo público para ele).
+- `.env.example`/`.env.sample` deve existir e listar **apenas nomes** com valor vazio ou
+  placeholder — um valor real no exemplo é o mesmo que commitar o `.env`.
+- **Opcional, só antes de deploy**: rodar o build e procurar padrões de segredo no bundle
+  (`grep -RInE '(SERVICE_ROLE|sk_live|-----BEGIN)' .next/static dist 2>/dev/null`). Não é
+  obrigatório no gate de push — build é caro e o scan de fonte já cobre o caso comum.
 - Reporte cada achado com arquivo, linha (quando o scanner der) e severidade.
 
 ### 3. Arquivos `.md` e notas que não deveriam ir para o GitHub
